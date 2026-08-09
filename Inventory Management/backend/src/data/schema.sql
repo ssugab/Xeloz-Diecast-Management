@@ -1,6 +1,15 @@
+-- Reset tables if re-running
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS items CASCADE;
+DROP TABLE IF EXISTS catalogs CASCADE;
+DROP TYPE IF EXISTS item_category CASCADE;
+DROP TYPE IF EXISTS item_status CASCADE;
+DROP TYPE IF EXISTS transaction_platform CASCADE;
+
 -- Create ENUMs for strict state management
 CREATE TYPE item_category AS ENUM ('COLLECTION', 'FOR_SALE');
 CREATE TYPE item_status AS ENUM ('AVAILABLE', 'RESERVED', 'SOLD');
+CREATE TYPE transaction_platform AS ENUM ('SHOPEE', 'FB_COD', 'IG', 'OTHER');
 
 -- Table: Catalogs
 CREATE TABLE IF NOT EXISTS catalogs (
@@ -18,8 +27,8 @@ CREATE TABLE IF NOT EXISTS catalogs (
 CREATE TABLE IF NOT EXISTS items (
     id SERIAL PRIMARY KEY,
     catalog_id INT NOT NULL,
-    condition_card SMALLINT CHECK (condition_card BETWEEN 1 AND 10),
-    condition_bubble SMALLINT CHECK (condition_bubble BETWEEN 1 AND 10),
+    condition_card VARCHAR(30) DEFAULT 'MINT', -- contoh: 'MINT', 'NOT_MINT', 'LOOSE', 'CREASE'
+    condition_bubble VARCHAR(30) DEFAULT 'MINT', -- contoh: 'MINT', 'DENTED', 'CRACKED', 'LOOSE'
     purchase_price NUMERIC(12, 2) NOT NULL CHECK (purchase_price >= 0),
     selling_price NUMERIC(12, 2) DEFAULT NULL CHECK (selling_price >= 0),
     category item_category NOT NULL DEFAULT 'FOR_SALE',
@@ -34,3 +43,16 @@ CREATE TABLE IF NOT EXISTS items (
 -- Indexes for query optimization
 CREATE INDEX idx_items_catalog_id ON items(catalog_id);
 CREATE INDEX idx_items_status_category ON items(status, category);
+
+-- Table: Transactions
+CREATE TABLE IF NOT EXISTS transactions (
+    id SERIAL PRIMARY KEY,
+    item_id INT NOT NULL UNIQUE,
+    platform transaction_platform NOT NULL DEFAULT 'OTHER',
+    actual_selling_price NUMERIC(12, 2) NOT NULL CHECK (actual_selling_price >= 0),
+    profit NUMERIC(12, 2) NOT NULL,
+    transaction_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_transactions_item FOREIGN KEY (item_id) 
+        REFERENCES items(id) ON DELETE RESTRICT
+);
