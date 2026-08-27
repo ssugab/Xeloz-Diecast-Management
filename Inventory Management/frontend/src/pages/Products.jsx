@@ -6,6 +6,48 @@ export default function Products() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // kontrol modal Create product
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // State untuk menampung data form input
+  const [formData, setFormData] = useState({
+    brand: '',
+    casting_name: '',
+    scale: '1:64',
+    series: '',
+    release_year: new Date().getFullYear(),
+    purchase_price: '',
+    selling_price: '',
+    stock: 1,
+    status: 'FOR_SALE',
+    condition_card: 'MINT',
+    condition_bubble: 'MINT'
+  });
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedId, setSelectedId] = useState(null)
+
+  const openEditModal = (item) => {
+    // 1. Saaveee the product id
+    setSelectedId(item.item_id)
+
+    // 2. timpa state FORMDATA dgn data MENTAH dari DB baris ini
+    setFormData({
+      brand: item.brand,
+      casting_name: item.casting_name,
+      scale: item.scale,
+      series: item.series,
+      release_year: item.release_year,
+      purchase_price: item.purchase_price,
+      selling_price: item.selling_price,
+      stock: item.stock,
+      status: item.status,
+      condition_card: item.condition_card,
+      condition_bubble: item.condition_bubble
+    })
+
+    // 3. Buka modalnyaaa
+    setIsEditMode(true);
+  }
 
   useEffect(() => {
     fetchProducts();
@@ -43,7 +85,74 @@ export default function Products() {
     item.brand.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // CREATE PRODUCT
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Mencegah browser refresh saat form disubmit
+    setIsSubmitting(true);
 
+    try {
+      const response = await fetch('http://localhost:5000/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // Memberitahu Express bahwa kita mengirim JSON
+        },
+        body: JSON.stringify(formData), // Mengubah objek State menjadi string JSON
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal menyimpan produk');
+      }
+
+      // Jika sukses:
+      setIsModalOpen(false); // 1. Tutup Modal
+      fetchProducts();       // 2. Tarik ulang data agar tabel update
+
+      // 3. Kosongkan form kembali
+      setFormData({
+        brand: '', casting_name: '', scale: '1:64', series: '', release_year: new Date().getFullYear(),
+        purchase_price: '', selling_price: '', stock: 1, status: 'FOR_SALE', condition_card: 'MINT', condition_bubble: 'MINT'
+      });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // UPDATE PRODUCTS
+  const handleEdit = async (e) => {
+    e.preventDefault(); // Mencegah browser refresh saat form disubmit
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/products/${selectedId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json', // Memberitahu Express bahwa kita mengirim JSON
+        },
+        body: JSON.stringify(formData), // Mengubah objek State menjadi string JSON
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal menyimpan produk');
+      }
+
+      // Jika sukses:
+      setIsEditMode(false); // 1. Tutup Modal
+      fetchProducts();       // 2. Tarik ulang data agar tabel update
+
+      // 3. Kosongkan form kembali
+      setFormData({
+        brand: '', casting_name: '', scale: '1:64', series: '', release_year: new Date().getFullYear(),
+        purchase_price: '', selling_price: '', stock: 1, status: 'FOR_SALE', condition_card: 'MINT', condition_bubble: 'MINT'
+      });
+
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -75,10 +184,14 @@ export default function Products() {
           <h1 className="text-2xl font-golos font-bold text-dark mb-2">Katalog Diecast</h1>
           <p className="text-gray-400 font-stack">Total Inventaris: {products.length} diecast</p>
         </div>
-        <button className="bg-purple hover:bg-purple/80 text-main px-4 py-2 rounded-lg font-stack flex items-center gap-2 transition-colors">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-purple hover:bg-purple/80 text-main px-4 py-2 rounded-lg font-stack flex items-center gap-2 transition-colors cursor-pointer"
+        >
           <Plus size={20} />
           Tambah Diecast
         </button>
+
       </div>
 
       {/* Search Bar Section */}
@@ -146,7 +259,9 @@ export default function Products() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <button className="p-2 bg-dark hover:bg-purple/20 text-purple rounded transition-colors" title="Edit">
+                        <button
+                          onClick={() => openEditModal(item)}
+                          className="p-2 bg-dark hover:bg-purple/20 text-purple rounded transition-colors" title="Edit">
                           <Edit2 size={16} />
                         </button>
                         <button className="p-2 bg-dark hover:bg-red-500/20 text-red-400 rounded transition-colors" title="Hapus">
@@ -161,6 +276,150 @@ export default function Products() {
           </table>
         </div>
       </div>
+
+      {/* --- MODAL TAMBAH PRODUK --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden font-stack">
+
+            <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-dark font-golos">Tambah Data Diecast</h2>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6">
+              {/* Grid Layout untuk membagi form jadi 2 kolom */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+
+                {/* Kolom Kiri: Data Katalog */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Merk (Brand) *</label>
+                    <input required type="text" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} className="w-full p-2 border rounded text-dark" placeholder="Hot Wheels, Tomica..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Nama Item *</label>
+                    <input required type="text" value={formData.casting_name} onChange={(e) => setFormData({ ...formData, casting_name: e.target.value })} className="w-full p-2 border rounded text-dark" placeholder="Nissan Skyline GT-R..." />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Skala</label>
+                      <input type="text" value={formData.scale} onChange={(e) => setFormData({ ...formData, scale: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Stok *</label>
+                      <input required type="number" min="1" value={formData.stock} onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })} className="w-full p-2 border rounded text-dark" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Kolom Kanan: Keuangan & Kondisi */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Harga Beli (Rp) *</label>
+                    <input required type="number" min="0" value={formData.purchase_price} onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Harga Jual (Rp) *</label>
+                    <input required type="number" min="0" value={formData.selling_price} onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Kond. Card</label>
+                      <input type="text" value={formData.condition_card} onChange={(e) => setFormData({ ...formData, condition_card: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Kond. Bubble</label>
+                      <input type="text" value={formData.condition_bubble} onChange={(e) => setFormData({ ...formData, condition_bubble: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Tombol Aksi */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 hover:text-purple rounded-lg">Batal</button>
+                <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-white bg-purple hover:bg-purple/80 rounded-lg flex items-center gap-2">
+                  {isSubmitting ? 'Menyimpan...' : 'Simpan Produk'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL UPDATE */}
+      {isEditMode && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm'>
+          <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden font-stack">
+
+            <div className="p-6 border-b border-gray-200 bg-purple flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white font-golos">Edit Data Diecast</h2>
+            </div>
+
+            <form onSubmit={handleEdit} className="p-4">
+              {/* Grid Layout untuk membagi form jadi 2 kolom */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+
+                {/* Kolom Kiri: Data Katalog */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Merk (Brand) *</label>
+                    <input required type="text" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} className="w-full p-2 border rounded text-dark" placeholder="Hot Wheels, Tomica..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Nama Item *</label>
+                    <input required type="text" value={formData.casting_name} onChange={(e) => setFormData({ ...formData, casting_name: e.target.value })} className="w-full p-2 border rounded text-dark" placeholder="Nissan Skyline GT-R..." />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Skala</label>
+                      <input type="text" value={formData.scale} onChange={(e) => setFormData({ ...formData, scale: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Stok *</label>
+                      <input required type="number" min="1" value={formData.stock} onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })} className="w-full p-2 border rounded text-dark" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Kolom Kanan: Keuangan & Kondisi */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Harga Beli (Rp) *</label>
+                    <input required type="number" min="0" value={formData.purchase_price} onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Harga Jual (Rp) *</label>
+                    <input required type="number" min="0" value={formData.selling_price} onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Kond. Card</label>
+                      <input type="text" value={formData.condition_card} onChange={(e) => setFormData({ ...formData, condition_card: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Kond. Bubble</label>
+                      <input type="text" value={formData.condition_bubble} onChange={(e) => setFormData({ ...formData, condition_bubble: e.target.value })} className="w-full p-2 border rounded text-dark" />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Tombol Aksi */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button type="button" onClick={() => setIsEditMode(false)} className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Batal</button>
+                <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-white bg-purple hover:bg-purple/80 rounded-lg flex items-center gap-2">
+                  {isSubmitting ? 'Menyimpan...' : 'Simpan Produk'}
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
