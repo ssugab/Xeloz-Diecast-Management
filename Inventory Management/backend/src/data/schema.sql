@@ -7,8 +7,7 @@ DROP TYPE IF EXISTS item_status CASCADE;
 DROP TYPE IF EXISTS transaction_platform CASCADE;
 
 -- Create ENUMs for strict state management
-CREATE TYPE item_category AS ENUM ('COLLECTION', 'FOR_SALE');
-CREATE TYPE item_status AS ENUM ('AVAILABLE', 'RESERVED', 'SOLD');
+CREATE TYPE item_status AS ENUM ('FOR_SALE', 'ON_BOOK', 'SOLD', 'IN_COLLECTION');
 CREATE TYPE transaction_platform AS ENUM ('SHOPEE', 'FB_COD', 'IG', 'OTHER');
 
 -- Table: Catalogs
@@ -31,8 +30,8 @@ CREATE TABLE IF NOT EXISTS items (
     condition_bubble VARCHAR(30) DEFAULT 'MINT', -- contoh: 'MINT', 'DENTED', 'CRACKED', 'LOOSE'
     purchase_price NUMERIC(12, 2) NOT NULL CHECK (purchase_price >= 0),
     selling_price NUMERIC(12, 2) DEFAULT NULL CHECK (selling_price >= 0),
-    category item_category NOT NULL DEFAULT 'FOR_SALE',
-    status item_status NOT NULL DEFAULT 'AVAILABLE',
+    stock INT NOT NULL DEFAULT 1 CHECK (stock >= 0),
+    status item_status NOT NULL DEFAULT 'FOR_SALE',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
@@ -42,7 +41,7 @@ CREATE TABLE IF NOT EXISTS items (
 
 -- Indexes for query optimization
 CREATE INDEX idx_items_catalog_id ON items(catalog_id);
-CREATE INDEX idx_items_status_category ON items(status, category);
+CREATE INDEX idx_items_status ON items(status);
 
 -- Table: Transactions
 CREATE TABLE IF NOT EXISTS transactions (

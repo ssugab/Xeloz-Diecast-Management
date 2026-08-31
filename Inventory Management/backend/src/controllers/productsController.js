@@ -14,7 +14,7 @@ const getAllProducts = async (req, res) => {
       c.release_year,
       i.purchase_price,
       i.selling_price,
-      i.category,
+      i.stock,
       i.status,
       i.condition_card,
       i.condition_bubble
@@ -53,7 +53,7 @@ const getProductById = async (req, res) => {
       c.series,
       i.purchase_price,
       i.selling_price,
-      i.category,
+      i.stock,
       i.status,
       i.condition_card,
       i.condition_bubble
@@ -87,7 +87,7 @@ const addProduct = async (req, res) => {
       condition_bubble,
       purchase_price,
       selling_price,
-      category,
+      stock,
       status
     } = req.body;
 
@@ -108,7 +108,7 @@ const addProduct = async (req, res) => {
 
     // 4. Step B: Insert ke tabel items menggunakan catalog_id baru
     const itemResult = await db.query(
-      `INSERT INTO items (catalog_id, condition_card, condition_bubble, purchase_price, selling_price, category, status)
+      `INSERT INTO items (catalog_id, condition_card, condition_bubble, purchase_price, selling_price, stock, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
@@ -117,8 +117,8 @@ const addProduct = async (req, res) => {
         condition_bubble || 'MINT',
         purchase_price,
         selling_price,
-        category || 'FOR_SALE',
-        status || 'AVAILABLE'
+        stock !== undefined ? stock : 1,
+        status || 'FOR_SALE'
       ]
     );
 
@@ -146,7 +146,7 @@ const updateProducts = async (req, res) => {
       // Field dari Items
       purchase_price,
       selling_price,
-      category,
+      stock,
       status,
       condition_card,
       condition_bubble
@@ -178,13 +178,13 @@ const updateProducts = async (req, res) => {
     SET
     purchase_price = COALESCE($1, purchase_price),
       selling_price = COALESCE($2, selling_price),
-      category = COALESCE($3, category),
+      stock = COALESCE($3, stock),
       status = COALESCE($4, status),
       condition_card = COALESCE($5, condition_card),
       condition_bubble = COALESCE($6, condition_bubble),
       updated_at = CURRENT_TIMESTAMP
       WHERE id = $7
-      `, [purchase_price, selling_price, category, status, condition_card, condition_bubble, id]);
+      `, [purchase_price, selling_price, stock, status, condition_card, condition_bubble, id]);
 
 
     // 4. Ambil data terbaru gabungan setelah diupdate
@@ -198,7 +198,7 @@ const updateProducts = async (req, res) => {
         c.release_year,
         i.purchase_price,
         i.selling_price,
-        i.category,
+        i.stock,
         i.status,
         i.condition_card,
         i.condition_bubble
